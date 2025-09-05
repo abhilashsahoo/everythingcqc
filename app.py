@@ -243,7 +243,6 @@ def main():
     }
     
     .stChatInput textarea {
-      
         border-radius: 20px;
     }
     
@@ -337,6 +336,36 @@ def main():
             if st.button("🗑️ Clear Chat History", type="secondary", use_container_width=True):
                 st.session_state.chat_history = []
                 st.rerun()
+        
+        # Instructions
+        st.divider()
+        st.markdown("""
+        **💡 Tip:** If this sidebar disappears, look for the **>** arrow at the top-left of the page, or use the "📋 Show Examples" button above.
+        """)
+    
+    # Alternative example questions in main area (if sidebar is hidden)
+    if st.session_state.get('show_examples', False) or not st.session_state.chat_history:
+        with st.expander("📋 Example Questions", expanded=st.session_state.get('show_examples', False)):
+            st.markdown("**Click any question to get started:**")
+            
+            example_questions = [
+                "What is the CQC?",
+                "How does CQC inspection work?",
+                "What are the fundamental standards?",
+                "How to prepare for a CQC inspection?",
+                "What are CQC ratings?",
+                "CQC registration process",
+                "What is the Duty of Candour?",
+                "CQC emergency support framework"
+            ]
+            
+            cols = st.columns(2)
+            for i, question in enumerate(example_questions):
+                with cols[i % 2]:
+                    if st.button(question, key=f"main_example_q_{i}"):
+                        st.session_state.pending_question = question
+                        st.session_state.show_examples = False
+                        st.rerun()
     
     # Display chat history
     for chat in st.session_state.chat_history:
