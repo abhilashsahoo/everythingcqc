@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-CQC Chat Interface - ChatGPT Style
-Clean chat interface for CQC content
+CQC RAG Chat Assistant - Fresh Clean Version
+Chat with Care Quality Commission content using Groq LLM
 """
 
 import os
@@ -117,8 +117,7 @@ class CQCRAGChat:
                 'title': doc.title,
                 'url': doc.url,
                 'content': doc.content,
-                'score': score,
-                'content_preview': doc.content[:300] + "..." if len(doc.content) > 300 else doc.content
+                'score': score
             })
         
         return formatted_results
@@ -130,7 +129,7 @@ class CQCRAGChat:
         
         if not search_results:
             return {
-                "answer": "I don't have information to answer this question based on the CQC website content. Please try rephrasing your question or ask about topics related to care quality, inspections, or regulations.",
+                "answer": "I can only answer questions about the Care Quality Commission (CQC) based on the information available to me. Please ask about CQC-related topics such as inspections, regulations, ratings, registration, or care standards.",
                 "sources": []
             }
         
@@ -163,10 +162,12 @@ class CQCRAGChat:
 Guidelines:
 - Use only the information from the provided documents to answer questions
 - Be accurate and cite specific information when possible
-- If the documents don't contain enough information, say so clearly
+- If the documents don't contain enough information to answer the question, simply say "I don't have enough information to answer that question based on the CQC content available to me."
 - Be conversational and helpful
 - Reference previous conversation context when relevant
-- Focus on care quality, inspections, regulations, and guidance topics"""
+- Focus on care quality, inspections, regulations, and guidance topics
+- Do not mention specific document titles or website pages in your response
+- Provide direct, helpful answers without referencing the source documents"""
 
         user_prompt = f"""Based on the CQC website content below, please answer the user's question.
 
@@ -200,66 +201,50 @@ Please provide a comprehensive answer based on the CQC website content. Be speci
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             return {
-                "answer": f"Sorry, I encountered an error while generating the response. Please try again.",
+                "answer": "Sorry, I encountered an error while generating the response. Please try again.",
                 "sources": sources
             }
 
 def main():
     # Page configuration
     st.set_page_config(
-        page_title="CQC Chat",
+        page_title="CQC Chat Assistant",
         page_icon="🏥",
-        layout="centered",
-        initial_sidebar_state="collapsed"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
     
-    # Custom CSS for ChatGPT-like appearance
+    # Custom CSS
     st.markdown("""
     <style>
-    .main > div {
+    .main {
         padding-top: 2rem;
-        padding-bottom: 1rem;
-    }
-    
-    .stApp {
-        max-width: 800px;
-        margin: 0 auto;
     }
     
     .chat-header {
         text-align: center;
         margin-bottom: 2rem;
+        padding: 2rem;
+        background: linear-gradient(90deg, #1f4e79 0%, #2e86de 100%);
+        border-radius: 10px;
+        color: white;
     }
     
     .chat-header h1 {
-        font-size: 2rem;
+        margin: 0;
+        font-size: 2.5rem;
         font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #2d3748;
     }
     
-    .example-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        justify-content: center;
-        margin-bottom: 2rem;
+    .chat-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
     }
     
-    .example-button {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.875rem;
-        color: #4a5568;
-    }
-    
-    .example-button:hover {
-        border-color: #cbd5e0;
-        background: #f7fafc;
+    .stChatInput textarea {
+      
+        border-radius: 20px;
     }
     
     .sources-container {
@@ -268,14 +253,6 @@ def main():
         padding: 1rem;
         margin-top: 1rem;
         border-left: 4px solid #4299e1;
-    }
-    
-    .source-item {
-        margin-bottom: 0.5rem;
-    }
-    
-    .source-item:last-child {
-        margin-bottom: 0;
     }
     
     .source-link {
@@ -288,26 +265,24 @@ def main():
         text-decoration: underline;
     }
     
-    /* Hide Streamlit elements */
+    /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* Chat input styling */
-    .stChatInput > div {
-        border-radius: 24px;
-    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Check for API key
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        st.error("❌ GROQ_API_KEY not found. Please add it to your .env file.")
-        st.stop()
-    
     # Initialize session state
     if 'chat_system' not in st.session_state:
+        # Check for API key
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            try:
+                groq_api_key = st.secrets["GROQ_API_KEY"]
+            except:
+                st.error("❌ GROQ_API_KEY not found. Please add it to your .env file or Streamlit secrets.")
+                st.stop()
+        
         st.session_state.chat_system = CQCRAGChat(groq_api_key)
         
     if 'chat_history' not in st.session_state:
@@ -316,25 +291,28 @@ def main():
     if 'database_loaded' not in st.session_state:
         st.session_state.database_loaded = False
     
-    # Load database silently
+    # Load database
     if not st.session_state.database_loaded:
         db_path = "./vector_db"
-        if st.session_state.chat_system.load_database(db_path):
-            st.session_state.database_loaded = True
-        else:
-            st.error("❌ Database not found. Please run the crawler first.")
-            st.stop()
+        with st.spinner("Loading CQC knowledge base..."):
+            if st.session_state.chat_system.load_database(db_path):
+                st.session_state.database_loaded = True
+            else:
+                st.error("❌ CQC database not found. Please ensure the vector_db folder exists.")
+                st.stop()
     
     # Header
     st.markdown("""
     <div class="chat-header">
-        <h1>🏥 CQC Assistant</h1>
+        <h1>🏥 CQC Chat Assistant</h1>
+        <p>Ask me anything about Care Quality Commission regulations, inspections, and guidance</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Sidebar with example questions
     with st.sidebar:
         st.header("💡 Example Questions")
+        st.markdown("Click any question to get started:")
         
         example_questions = [
             "What is the CQC?",
@@ -347,14 +325,16 @@ def main():
             "CQC emergency support framework"
         ]
         
-        for question in example_questions:
-            if st.button(question, key=f"sidebar_{question}", use_container_width=True):
-                st.session_state.current_question = question
+        for i, question in enumerate(example_questions):
+            if st.button(question, key=f"example_q_{i}", use_container_width=True):
+                # Set the question to be processed
+                st.session_state.pending_question = question
                 st.rerun()
         
+        # Clear chat button
         if st.session_state.chat_history:
             st.divider()
-            if st.button("🗑️ Clear Chat", type="secondary", use_container_width=True):
+            if st.button("🗑️ Clear Chat History", type="secondary", use_container_width=True):
                 st.session_state.chat_history = []
                 st.rerun()
     
@@ -368,7 +348,7 @@ def main():
         with st.chat_message("assistant"):
             st.write(chat['assistant'])
             
-            # Show sources in a clean format
+            # Show sources
             if chat.get('sources'):
                 st.markdown("""
                 <div class="sources-container">
@@ -377,20 +357,22 @@ def main():
                 
                 for i, source in enumerate(chat['sources'], 1):
                     st.markdown(f"""
-                    <div class="source-item">
+                    <div style="margin: 0.3rem 0;">
                         {i}. <a href="{source['url']}" target="_blank" class="source-link">{source['title']}</a>
                     </div>
                     """, unsafe_allow_html=True)
                 
                 st.markdown("</div>", unsafe_allow_html=True)
     
-    # Chat input
-    user_input = st.chat_input("Ask me anything about CQC...")
+    # Handle pending question from sidebar
+    user_input = None
+    if hasattr(st.session_state, 'pending_question'):
+        user_input = st.session_state.pending_question
+        delattr(st.session_state, 'pending_question')
     
-    # Handle example question click
-    if hasattr(st.session_state, 'current_question'):
-        user_input = st.session_state.current_question
-        delattr(st.session_state, 'current_question')
+    # Chat input
+    if not user_input:
+        user_input = st.chat_input("Ask me anything about CQC regulations, inspections, or guidance...")
     
     # Process user input
     if user_input:
@@ -400,7 +382,7 @@ def main():
         
         # Generate response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+            with st.spinner("Searching CQC knowledge base..."):
                 result = st.session_state.chat_system.generate_response(
                     user_input, 
                     st.session_state.chat_history
@@ -418,7 +400,7 @@ def main():
                 
                 for i, source in enumerate(result['sources'], 1):
                     st.markdown(f"""
-                    <div class="source-item">
+                    <div style="margin: 0.3rem 0;">
                         {i}. <a href="{source['url']}" target="_blank" class="source-link">{source['title']}</a>
                     </div>
                     """, unsafe_allow_html=True)
@@ -433,9 +415,9 @@ def main():
             'timestamp': datetime.now().isoformat()
         })
         
-        # Limit chat history
-        if len(st.session_state.chat_history) > 10:
-            st.session_state.chat_history = st.session_state.chat_history[-10:]
+        # Limit chat history to last 15 conversations
+        if len(st.session_state.chat_history) > 15:
+            st.session_state.chat_history = st.session_state.chat_history[-15:]
         
         st.rerun()
 
