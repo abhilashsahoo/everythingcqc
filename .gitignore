@@ -9,10 +9,10 @@ env/
 .env.local
 .env.production
 
-# Vector Database (large files)
-vector_db/
-*.bin
-*.parquet
+# Vector Database (COMMENTED OUT to allow upload)
+# vector_db/
+# *.bin
+# *.parquet
 
 # Python Cache
 __pycache__/
@@ -67,5 +67,5 @@ data/
 *.json
 *.xlsx
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (keep local secrets out)
+.streamlit/secrets.toml
