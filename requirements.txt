@@ -1,0 +1,22 @@
+# Core dependencies
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+groq>=0.4.0
+
+# Web scraping and content processing
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+lxml>=4.9.3
+
+# Vector embeddings and search
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+torch>=2.0.0
+
+# Data handling
+pandas>=2.1.0
+pyarrow>=12.0.0  # Required for parquet files
+
+# Utilities
+tqdm>=4.66.0
